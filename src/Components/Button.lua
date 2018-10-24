@@ -3,7 +3,7 @@
 
 local UserInputService = game:GetService("UserInputService")
 
--- Import configuration; gives access to Roact library.
+-- Import configuration, gives access to Roact library.
 local Configuration = require(script.Parent.Parent.Configuration)
 local Roact = Configuration.Roact
 local RoactAnimate = Configuration.RoactAnimate
@@ -31,11 +31,11 @@ local Button = Roact.PureComponent:extend("MaterialButton")
 
 function Button:init(props)
 	self.state = {
-		_pressed = false;
-		_pressPoint = UDim2.new(0, 0, 0, 0);
-		Elevation = 2;
-		_mouseOver = false;
-		_bgColor = RoactAnimate.Value.new(self.props.BackgroundColor3 or (self.props.Flat and ThemeAccessor.Get(self, "FlatButtonColor", Color3.new(1, 1, 1)) or ThemeAccessor.Get(self, "ButtonColor", Color3.new(1, 1, 1))));
+		_pressed = false,
+		_pressPoint = UDim2.new(0, 0, 0, 0),
+		Elevation = 2,
+		_mouseOver = false,
+		_bgColor = RoactAnimate.Value.new(self.props.BackgroundColor3 or (self.props.Flat and ThemeAccessor.Get(self, "FlatButtonColor", Color3.new(1, 1, 1)) or ThemeAccessor.Get(self, "ButtonColor", Color3.new(1, 1, 1)))),
 	}
 
 	self._lastInputEvent = tick()
@@ -80,8 +80,11 @@ function Button:_scheduleHitTest(rbx)
 end
 
 function Button:render()
-	local flat = self.props.Flat
-	local elevation = (flat and 0) or self.state.Elevation
+	local props = self.props
+	local transparency = props.ButtonTransparency
+	local textsize = props.ButtonTextSize
+	local flat = props.Flat
+	local elevation = flat and 0 or self.state.Elevation
 
 	local function hitTester(rbx)
 		self:_scheduleHitTest(rbx)
@@ -89,38 +92,39 @@ function Button:render()
 
 	-- root is a dummy frame
 	return Roact.createElement("Frame", {
-		BackgroundTransparency = 1;
-		Position = self.props.Position or UDim2.new(0, 0, 0, 0);
-		AnchorPoint = self.props.AnchorPoint or Vector2.new(0, 0);
-		Size = self.props.Size or UDim2.new(0, 100, 0, 40);
-		ZIndex = self.props.ZIndex or 1;
-		LayoutOrder = self.props.LayoutOrder,
+		BackgroundTransparency = 1,
+		Position = props.Position or UDim2.new(0, 0, 0, 0),
+		AnchorPoint = props.AnchorPoint or Vector2.new(0, 0),
+		Size = props.Size or UDim2.new(0, 100, 0, 40),
+		ZIndex = props.ZIndex or 1,
+		LayoutOrder = props.LayoutOrder,
 
 		[Roact.Change.AbsolutePosition] = hitTester,
-		[Roact.Change.AbsoluteSize] = hitTester,
+		[Roact.Change.AbsoluteSize] = hitTester
 	}, {
 		Roact.createElement(RoactAnimate.TextButton, {
-			AutoButtonColor = false;
-			BorderSizePixel = 0;
-			BackgroundColor3 = self.state._bgColor;
-			Size = UDim2.new(1, 0, 1, 0);
-			Text = "";
-			ZIndex = 2;
+			AutoButtonColor = false,
+			BorderSizePixel = 0,
+			BackgroundColor3 = self.state._bgColor,
+			BackgroundTransparency = transparency or 0,
+			Size = UDim2.new(1, 0, 1, 0),
+			Text = "",
+			ZIndex = 2,
 
 			[Roact.Ref] = function(rbx)
 				self._rbx = rbx
-			end;
+			end,
 
 			[Roact.Event.InputBegan] = function(rbx, input)
-				for _, allowed in ipairs(RIPPLE_TRIGGER_INPUT_TYPES) do
+				for _, allowed in pairs(RIPPLE_TRIGGER_INPUT_TYPES) do
 					if input.UserInputType == allowed then
 						local relativeX = (input.Position.X - rbx.AbsolutePosition.X) / rbx.AbsoluteSize.X
 						local relativeY = (input.Position.Y - rbx.AbsolutePosition.Y) / rbx.AbsoluteSize.Y
 
-						self:setState({
-							_pressPoint = UDim2.new(relativeX, 0, relativeY, 0);
-							_pressed = true;
-						})
+						self:setState {
+							_pressPoint = UDim2.new(relativeX, 0, relativeY, 0),
+							_pressed = true
+						}
 
 						break
 					end
@@ -128,62 +132,60 @@ function Button:render()
 			end,
 
 			[Roact.Event.InputEnded] = function(rbx, input)
-				for _, allowed in ipairs(RIPPLE_TRIGGER_INPUT_TYPES) do
+				for _, allowed in pairs(RIPPLE_TRIGGER_INPUT_TYPES) do
 					if input.UserInputType == allowed then
-						self:setState({
-							_pressed = false;
-						})
-
+						self:setState { _pressed = false }
 						break
 					end
 				end
 			end,
 
 			[Roact.Event.MouseEnter] = function()
-				self:setState({
-					Elevation = 4;
-					_mouseOver = true;
-				})
-			end;
+				self:setState {
+					Elevation = 4,
+					_mouseOver = true,
+				}
+			end,
 
 			[Roact.Event.MouseLeave] = function()
-				self:setState({
-					Elevation = 2;
-					_mouseOver = false;
-				})
+				self:setState {
+					Elevation = 2,
+					_mouseOver = false,
+				}
 			end,
 
 			[Roact.Event.MouseButton1Click] = function()
-				if self.props.onClicked then
-					self.props.onClicked()
+				if props.onClicked then
+					props.onClicked()
 				end
-			end,
-		}, self.props[Roact.Children]);
+			end
+		}, props[Roact.Children]),
 
 		Children = Roact.createElement("Frame", {
 			Size = UDim2.new(1, 0, 1, 0),
 			BackgroundTransparency = 1,
-			ZIndex = 4,
-		}, self.props[Roact.Children]),
+			ZIndex = 4
+		}, props[Roact.Children]),
 
 		Ink = Roact.createElement(Ink, {
-			ZIndex = 3;
-			Rippling = self.state._pressed;
-			Origin = self.state._pressPoint;
-			InkColor3 = self.props.InkColor3 or (self.props.Flat and ThemeAccessor.Get(self, "PrimaryColor") or Color3.new(1, 1, 1));
-			InkTransparency = 0.5;
-		});
+			ZIndex = 3,
+			Rippling = self.state._pressed,
+			Origin = self.state._pressPoint,
+			InkColor3 = props.InkColor3 or (props.Flat and ThemeAccessor.Get(self, "PrimaryColor") or Color3.new(1, 1, 1)),
+			InkTransparency = 0.5
+		}),
 
 		Shadow = Roact.createElement(Shadow, {
-			Elevation = elevation;
-			ZIndex = 1;
-		});
+			Elevation = elevation,
+			ZIndex = 1
+		}),
 
 		TextLabel = Roact.createElement(TextView, {
-			Class = "Button";
-			Size = UDim2.new(1, 0, 1, 0);
-			Text = self.props.Text and BUTTON_TEXT_SUBSTITUTION(self.props.Text) or "";
-			ZIndex = 4;
+			Class = "Button",
+			Size = UDim2.new(1, 0, 1, 0),
+			Text = props.Text and BUTTON_TEXT_SUBSTITUTION(props.Text) or "",
+			ZIndex = 4,
+			TextSize = textsize or 18
 		})
 	})
 end
